@@ -1,0 +1,128 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style>
+#go_div, #left_div, #right_div, #open_div, #attack_div, #operation_div, #for_div, #delete_div
+{float:left; width:67px; height:23px; margin:10px;padding:10px;border:1px solid #aaaaaa;}
+#command_div
+{float:left; width:1000px; height:500px; margin:10px;padding:10px;border:1px solid #aaaaaa;}
+</style>
+<script>
+var now_index=8;
+var now_div;
+var now_pic;
+var now_name;
+var for_elem;
+function allowDrop(ev) {
+    ev.preventDefault();
+}
+
+function drag(ev) {
+    ev.dataTransfer.setData("text", ev.target.id);
+    now_div = document.getElementById(ev.target.id).parentNode.id;
+    now_pic = document.getElementById(ev.target.id).src;
+    now_id = document.getElementById(ev.target.id).id;
+    now_name = document.getElementById(ev.target.id).name;
+}
+
+function drop(ev) {
+  if((ev.target.id=="command_div"||ev.target.parentNode.id=="command_div")&&now_div!="delete_div"){
+    try {
+    ev.preventDefault();
+    var data = ev.dataTransfer.getData("text");
+    if(now_div=="for_div"){
+      var loop_num = prompt("請輸入迴圈次數(2-9)", "2");
+      if(loop_num>9||loop_num<2||isNaN(loop_num)){
+        throw { }
+      }
+      document.getElementById(data).src="for_"+loop_num+".jpg"
+      for_elem = document.createElement("div");
+      for_elem.setAttribute("id", "for_"+now_id);
+      for_elem.setAttribute("ondrop","drop(event)");
+      for_elem.setAttribute("ondragover","allowDrop(event)");
+      for_elem.setAttribute("style","display:inline-block; position: relative; width:335px; height:23px; margin:10px;padding:10px;border:1px solid #aaaaaa;");
+    }
+    if(ev.target.id=="command_div"||document.getElementById(ev.target.id).childNodes.length<6)ev.target.appendChild(document.getElementById(data));
+    if(now_div=="for_div") ev.target.appendChild(for_elem);
+    if(document.getElementById(now_div).childNodes.length==2)
+    {
+      var elem = document.createElement("img");
+   elem.setAttribute("src", now_pic);
+   elem.setAttribute("height", "19");
+   elem.setAttribute("width", "55");
+   elem.setAttribute("draggable", "true");
+   elem.setAttribute("ondragstart", "drag(event)");
+   elem.setAttribute("id", "drag"+now_index);
+   elem.setAttribute("name", now_name);
+   now_index=now_index+1;
+   document.getElementById(now_div).appendChild(elem);
+    }
+    }
+    catch(e)
+    {
+      alert("範圍錯誤!!");
+    }
+ }
+ else if((ev.target.id=="delete_div"||ev.target.id=="delete_loc")&&(now_div=="command_div"||now_div.substring(0, 3)=="for")){
+   ev.preventDefault();
+   var data = ev.dataTransfer.getData("text");
+   if(now_name=="for"){
+     var delete_route = document.getElementById("for_"+document.getElementById(data).id).id;
+     document.getElementById(data).parentNode.removeChild(document.getElementById(delete_route));
+   }
+   document.getElementById(data).parentNode.removeChild(document.getElementById(data));
+ }
+
+}
+function Start(){
+  for(var i=0; i<document.getElementById("command_div").childNodes.length; i++){
+    if(document.getElementById("command_div").childNodes[i].name=="for"){
+      var path_length = document.getElementById("command_div").childNodes[i].src.length;
+      var for_num = document.getElementById("command_div").childNodes[i].src.substring(path_length-5,path_length-4);
+      for(var j=0;j<for_num;j++) {
+        for(var k=0;k<document.getElementById("command_div").childNodes[i+1].childNodes.length;k++){
+          alert(document.getElementById("command_div").childNodes[i+1].childNodes[k].name);
+        }
+      }
+      i++;
+    }
+    else {
+      alert(document.getElementById("command_div").childNodes[i].name);
+    }
+  }
+}
+</script>
+</head>
+<body>
+<div id="go_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+  <img src="go.jpg" draggable="true" ondragstart="drag(event)" id="drag1" name="go" width="55" height="19">
+</div>
+<div id="left_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+  <img src="left.jpg" draggable="true" ondragstart="drag(event)" id="drag2" name="left" width="55" height="19">
+</div>
+<div id="right_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+  <img src="right.jpg" draggable="true" ondragstart="drag(event)" id="drag3" name="right" width="55" height="19">
+</div>
+<div id="open_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+  <img src="open.jpg" draggable="true" ondragstart="drag(event)" id="drag4" name="open" width="55" height="19">
+</div>
+<div id="attack_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+  <img src="attack.jpg" draggable="true" ondragstart="drag(event)" id="drag5" name="attack" width="55" height="19">
+</div>
+<div id="operation_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+  <img src="operation.jpg" draggable="true" ondragstart="drag(event)" id="drag6" name="operation" width="55" height="19">
+</div>
+<div id="for_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+  <img src="for_howmany.jpg" draggable="true" ondragstart="drag(event)" id="drag7" name="for" width="55" height="19">
+</div>
+<div id="delete_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+  <img src="delete.jpg" id="delete_loc" width="55" height="19">
+</div>
+
+<br style="clear: both;">
+<div id="command_div" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+<br style="clear: both;">
+<button onclick="Start()">start</button>
+
+</body>
+</html>

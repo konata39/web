@@ -1,0 +1,292 @@
+<html !DOCTYPE html>
+	<head>
+		<script language = "javascript">
+			//=========Global variable==============
+			var Xmax = 10;
+			var Ymax = 10;
+			var Bsize = 48; 	//block size
+			var POSX = 100;		//absolute position x
+			var POSY = 100;		//absolute position y
+			var MapSrc = "map";
+			var Total = 200;
+			
+			var Map0 = new Array(Xmax*Ymax);
+			var Map1 = new Array(Xmax*Ymax);
+			var Mwalk = new Array(Total);
+			
+			//=========Map reference function==============
+			//initial map (create img)
+			function Map_init(){
+			
+				var i,j;
+				for(i=0; i<Xmax; i++){
+					for(j=0; j<Ymax; j++){
+						Map0[j*Xmax + i] = 0;
+						Map1[j*Xmax + i] = 0;
+					}
+				}
+				
+				var MA = document.getElementById("MapArea");
+				MA.innerHTML = "";
+				
+				var i,j;
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MA.innerHTML += "<img name='mblock0' class='mblock0_s'>";
+					}
+					//MA.innerHTML += "<br>";
+				}
+				
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MA.innerHTML += "<img name='mblock1' class='mblock1_s'>";
+					}
+					//MA.innerHTML += "<br>";
+				}
+				
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MA.innerHTML += "<img name='medit' class='medit_s' onclick='Draw_block(" + i + "," + j + ")'>";
+					}
+					//MA.innerHTML += "<br>";
+				}
+				
+				var MB0 = document.getElementsByName("mblock0");
+				var MB1 = document.getElementsByName("mblock1");
+				var ME = document.getElementsByName("medit");
+				
+				
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+							MB0[Xmax*j + i].style.left = Bsize * i + 30;
+							MB0[Xmax*j + i].style.top = Bsize * j + 30;
+							MB1[Xmax*j + i].style.left = Bsize * i + 30;
+							MB1[Xmax*j + i].style.top = Bsize * j + 30;
+							ME[Xmax*j + i].style.left = Bsize * i + 30;
+							ME[Xmax*j + i].style.top = Bsize * j + 30;
+							
+					}
+				}
+				
+			}
+			
+			//Draw the map
+			function Map_draw(){
+				var MB = document.getElementsByName("mblock0");
+				if(MB == null)alert('fuck');
+				var i,j;
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MB[j*Xmax + i].src = MapSrc + "/" + Map0[j*Xmax + i] + ".png";
+					}
+				}
+				
+				var MB = document.getElementsByName("mblock1");
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MB[j*Xmax + i].src = MapSrc + "/" + Map1[j*Xmax + i] + ".png";
+					}
+				}
+			}
+			
+			//Clear the map
+			function Map_clear(){
+				var MB;
+				var i,j;
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MB = document.getElementsByName("mblock0");
+						MB[j*Xmax + i].src = "";
+					}
+				}
+			}
+			
+			//Editor relative ================================================
+			var mblock_sel = 0;
+			var mblock_layer = 1;
+			
+			//editor initial
+			function Map_edit_init(){
+				var ME = document.getElementById("MapEdit");
+				var i;
+				
+				ME.innerHTML = "";
+				
+				for(i=0; i<=Total; i++){
+					Mwalk[i] = 0;
+					ME.innerHTML += "<img name='mpatch' class='mpatch_s' onclick='Map_edit_select(" + i + ")'>";
+					if(i%16 == 0)ME.innerHTML += "<br>";
+				}
+				
+				var MP = document.getElementsByName("mpatch");
+				for(i=0; i<=Total; i++){
+					MP[i].src = MapSrc + "/" + i + ".png" ;
+				}
+			}
+			
+			//select block
+			function Map_edit_select(num){
+				var MS = document.getElementById("mselect");
+				if(document.getElementById("ck").checked == false){
+					MS.src = MapSrc + "/" + num + ".png";
+					mblock_sel = num;
+				}
+				else {
+					var MP = document.getElementsByName("mpatch");
+					if(Mwalk[num] == 1){
+						Mwalk[num] = 0;
+						MP[num].style.borderColor = "blue";
+					}
+					else{
+						Mwalk[num] = 1;
+						MP[num].style.borderColor = "red";
+					}
+				}
+			}
+			
+			function Change_layer(layer){
+				var i,j;
+				var MB0 = document.getElementsByName("mblock0");
+				var MB1 = document.getElementsByName("mblock1");
+				var ME = document.getElementsByName("medit");
+				
+				var op1 = 1;
+				var op2 = 0.4;
+				if(layer == 1){
+					op1 = 0.4;
+					op2 = 1;
+				}
+				
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MB1[j*Xmax + i].style.opacity = op1;
+						//MB0[j*Xmax + i].style.opacity = op2;
+					}
+				}
+				mblock_layer = layer;
+			}
+			
+			function Draw_block(x,y){
+				if(mblock_layer == 1) MB = document.getElementsByName("mblock0");
+				else MB = document.getElementsByName("mblock1");
+				
+				MB[y*Xmax + x].src = MapSrc + "/" + mblock_sel + ".png";
+				
+				if(mblock_layer == 1)Map0[y*Xmax + x] =  mblock_sel;
+				else Map1[y*Xmax + x] =  mblock_sel;
+			}
+			
+			//System relative===================================================
+			window.onload = Editor_init;
+			
+			function Editor_init(){
+				Map_init();
+				Map_edit_init();
+			}
+			
+			function Upload_map(){
+				/************************************
+				[Upload Information]
+				array : Map0 Map1 Mwalk 
+				value : Xmax Ymax Bsize Total MapSrc
+				*************************************/
+				
+				//get information
+				Mname = document.getElementById("map_name").value;
+	
+				para= "KeyMap0=" + Map0.join(",") + "&KeyMap1=" + Map1.join(",") + "&KeyMwalk=" + Mwalk.join(",") + "&KeyName=" + Mname +
+					"&KeyXmax=" + Xmax + "&KeyYmax=" + Ymax + "&KeyBsize=" + Bsize + "&KeyTotal=" + Total + "&KeyMapSrc=" + MapSrc;
+				var oXHR=new XMLHttpRequest();
+				oXHR.open("GET","map_upload.php?"+para,true);
+				oXHR.onreadystatechange= function(){
+					if(oXHR.readyState==4 &&(oXHR.status==200||oXHR.status==304)){
+						var r = oXHR.responseText;
+						alert(r);
+					}
+				}
+				oXHR.send();
+			}
+		
+		</script>
+		
+		<style>
+			img.mblock0_s {
+				position: absolute;
+				height: 48px;
+				width: 48px;
+				border: 1px solid blue;
+			}
+			
+			img.mblock1_s {
+				position: absolute;
+				height: 48px;
+				width: 48px;
+				border: 1px solid blue;
+			}
+			
+			img.medit_s {
+				position: absolute;
+				height: 48px;
+				width: 48px;
+				border: 1px solid blue;
+			}
+			
+			img.mpatch_sel_s {
+				height: 48px;
+				width: 48px;
+				border: 5px ridge ;
+				margin: 3px;
+			}
+			
+			img.mpatch_s {
+				height: 48px;
+				width: 48px;
+				border: 3px ridge blue;
+				margin: 1px;
+			}
+			
+			.mpatch_bg_s{
+				align: center;
+				list-style-type: none;
+				height: 500px;
+				width: 1000px;
+				overflow: scroll;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				background: url(src/msk.png) repeat;
+			}
+
+		
+		</style>
+	</head>
+	
+	<body>
+		<div id="MapArea" align="center">
+		</div>
+		
+		<br><br><br><br><br><br><br><br><br><br><br><br>
+		<br><br><br><br><br><br><br><br><br><br><br><br>
+		<br><br><br><br><br>	
+		<div>
+		<input type="button" value="init" onclick="Map_init()">
+		<input type="button" value="mpatch" onclick="Map_edit_init()">
+		<input type="button" value="upload" onclick="Upload_map()">
+		</div>
+		
+		<br>
+		Map Name : <input type="textbox" id="map_name" value="new_map"><br>
+		Map Source : <input type="textbox" id="map_source" value="map"><br>
+		Max X : <input type="number" value="10" id="map_xmax"><br>
+		Max Y : <input type="number" value="10" id="map_ymax"><br>
+		Block Size : <input type="number" value="48" id="map_bsize"><br>
+		<input type="radio" name="layer" value="down" checked="true" onclick="Change_layer(1)"> Down
+		<input type="radio" name="layer" value="top" onclick="Change_layer(2)"> Top<br>
+		<input type="checkbox" id="ck" value="walk"> walk<br><br>
+		
+		<img id='mselect' class='mpatch_sel_s'><br><br>
+		<div id="MapEdit" class="mpatch_bg_s">
+		</div>
+	
+	</body>
+
+</html>

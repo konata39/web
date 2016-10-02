@@ -1,0 +1,745 @@
+<html !DOCTYPE html>
+	<head>
+	<style>
+	#go_div, #left_div, #right_div, #open_div, #attack_div, #operation_div, #for_div, #delete_div
+	{float:left; width:67px; height:23px; margin:10px;padding:10px;border:1px solid #aaaaaa;}
+	#command_div
+	{float:left; width:500px; height:400px; margin:10px;padding:10px;border:1px solid #aaaaaa;}
+	#another1_div, #another2_div
+	{float:left; width:600px; height:600px; margin:10px;padding:10px;border:1px solid #aaaaaa;}
+	</style>
+		<script language = "javascript">
+			//=========Global variable==============
+			var Name;
+			var MapSrc = "map";
+			var Xmax = 4;
+			var Ymax = 4;
+			var Bsize = 48; 	//block size
+			var Map0;
+			var Map1;
+			var Mwalk;
+			var total_money;
+			var target_money;
+
+			var Xpos = 100;		//absolute position x
+			var Ypos = 130;		//absolute position y
+
+
+			//=========command function===================
+			var now_index=8;
+			var now_div;
+			var now_pic;
+			var now_name;
+			var for_elem;
+			var on_move = 0;
+			function allowDrop(ev) {
+			    ev.preventDefault();
+			}
+
+			function drag(ev) {
+			    ev.dataTransfer.setData("text", ev.target.id);
+			    now_div = document.getElementById(ev.target.id).parentNode.id;
+			    now_pic = document.getElementById(ev.target.id).src;
+			    now_id = document.getElementById(ev.target.id).id;
+			    now_name = document.getElementById(ev.target.id).name;
+			}
+
+			function drop(ev) {
+			  if((ev.target.id=="command_div"||ev.target.parentNode.id=="command_div")&&now_div!="delete_div"){
+			    try {
+			    ev.preventDefault();
+			    var data = ev.dataTransfer.getData("text");
+			    if(now_div=="for_div"){
+			      var loop_num = prompt("請輸入迴圈次數(2-9)", "2");
+			      if(loop_num>9||loop_num<2||isNaN(loop_num)){
+			        throw { }
+			      }
+			      document.getElementById(data).src="for_"+loop_num+".jpg"
+			      for_elem = document.createElement("div");
+			      for_elem.setAttribute("id", "for_"+now_id);
+			      for_elem.setAttribute("ondrop","drop(event)");
+			      for_elem.setAttribute("ondragover","allowDrop(event)");
+			      for_elem.setAttribute("style","display:inline-block; position: relative; width:335px; height:23px; margin:10px;padding:10px;border:1px solid #aaaaaa;");
+			    }
+			    if(ev.target.id=="command_div"||document.getElementById(ev.target.id).childNodes.length<6)ev.target.appendChild(document.getElementById(data));
+			    if(now_div=="for_div") ev.target.appendChild(for_elem);
+			    if(document.getElementById(now_div).childNodes.length==2)
+			    {
+			      var elem = document.createElement("img");
+			   elem.setAttribute("src", now_pic);
+			   elem.setAttribute("height", "19");
+			   elem.setAttribute("width", "55");
+			   elem.setAttribute("draggable", "true");
+			   elem.setAttribute("ondragstart", "drag(event)");
+			   elem.setAttribute("id", "drag"+now_index);
+			   elem.setAttribute("name", now_name);
+			   now_index=now_index+1;
+			   document.getElementById(now_div).appendChild(elem);
+			    }
+			    }
+			    catch(e)
+			    {
+			      alert("範圍錯誤!!");
+			    }
+			 }
+			 else if((ev.target.id=="delete_div"||ev.target.id=="delete_loc")&&(now_div=="command_div"||now_div.substring(0, 3)=="for")){
+			   ev.preventDefault();
+			   var data = ev.dataTransfer.getData("text");
+			   if(now_name=="for"){
+			     var delete_route = document.getElementById("for_"+document.getElementById(data).id).id;
+			     document.getElementById(data).parentNode.removeChild(document.getElementById(delete_route));
+			   }
+			   document.getElementById(data).parentNode.removeChild(document.getElementById(data));
+			 }
+
+			}
+			var i=0;
+			var j=0;
+			var k=0;
+			var for_num;
+			var delay_time=1000;
+			var for_delay_time=1000;
+			function for_Start(){
+					setTimeout(function () {
+						if(document.getElementById("command_div").childNodes[i+1].childNodes[k].name=="go")
+						{
+							Char_walk();
+						}
+						else if(document.getElementById("command_div").childNodes[i+1].childNodes[k].name=="left"){
+							Char_turn(1);
+						}
+						else if(document.getElementById("command_div").childNodes[i+1].childNodes[k].name=="right"){
+							Char_turn(2);
+						}
+						else if(document.getElementById("command_div").childNodes[i+1].childNodes[k].name=="attack"){
+							Hit_monster();
+						}
+						else if(document.getElementById("command_div").childNodes[i+1].childNodes[k].name=="open"){
+							Open_box();
+						}
+						else if(document.getElementById("command_div").childNodes[i+1].childNodes[k].name=="operation"){
+							Switch();
+						}
+						if(document.getElementById("command_div").childNodes[i+1].childNodes[k].name=="attack")for_delay_time=2000;
+						else for_delay_time=1000;
+						k++;                     //  increment the counter
+			      if (k<document.getElementById("command_div").childNodes[i+1].childNodes.length) {            //  if the counter < 10, call the loop function
+			         for_Start();             //  ..  again which will trigger another
+			      }
+						else {
+							k=0;
+							j++;
+							if(j<for_num)
+							{
+								for_Start();
+							}
+							else
+							{
+								j=0;
+								i+=2;
+								for_delay_time = 1000;
+							}
+						}
+					}, for_delay_time)
+			}
+			function Start(){
+				if(i==0)
+				{
+					total_money = 0;
+					Char_init(0,0);
+					face = 0;
+					var mname = document.getElementById("map_name").value;
+					var res = new String;
+
+					para= "key1=" + mname;
+					var oXHR=new XMLHttpRequest();
+					oXHR.open("GET","map_load.php?"+para,true);
+					oXHR.onreadystatechange= function(){
+						if(oXHR.readyState==4 &&(oXHR.status==200||oXHR.status==304)){
+							res = oXHR.responseText;
+							//=====================================
+
+							if(res != "f"){
+								var res2 = res.split("&");
+								Name = res2[0];
+								MapSrc = res2[1];
+								Xmax = res2[2];
+								Ymax = res2[3];
+								Bsize = res2[4];
+								Map0 = (res2[5]).split(",");
+								Map1 = (res2[6]).split(",");
+								Mwalk = (res2[7]).split(",");
+
+								Map_init();
+								Map_draw();
+								//alert("Load success !!");
+								face=0;
+								Char_init(0,0);
+							}
+							//=====================================
+						}
+				}
+				oXHR.send();
+			}
+
+				setTimeout(function () {    //  call a 3s setTimeout when the loop is called
+					if (i<document.getElementById("command_div").childNodes.length) {
+					if(document.getElementById("command_div").childNodes[i].name=="for"){
+						var path_length = document.getElementById("command_div").childNodes[i].src.length;
+						for_num = document.getElementById("command_div").childNodes[i].src.substring(path_length-5,path_length-4);
+						delay_time=for_num*document.getElementById("command_div").childNodes[i+1].childNodes.length*1000+1000*2;
+						for_Start();
+						/*for(var j=0;j<for_num;j++) {
+							for(var k=0;k<document.getElementById("command_div").childNodes[i+1].childNodes.length;k++){
+								alert(document.getElementById("command_div").childNodes[i+1].childNodes[k].name);
+							}
+						}*/
+					}
+					else {
+						if(document.getElementById("command_div").childNodes[i].name=="go")
+						{
+							Char_walk();
+						}
+						else if(document.getElementById("command_div").childNodes[i].name=="left"){
+							Char_turn(1);
+						}
+						else if(document.getElementById("command_div").childNodes[i].name=="right"){
+							Char_turn(2);
+						}
+						else if(document.getElementById("command_div").childNodes[i].name=="attack"){
+							Hit_monster();
+						}
+						else if(document.getElementById("command_div").childNodes[i].name=="open"){
+							Open_box();
+						}
+						else if(document.getElementById("command_div").childNodes[i].name=="operation"){
+							Switch();
+						}
+						if(document.getElementById("command_div").childNodes[i].name=="attack")delay_time=2000;
+						else delay_time=1000;
+						i++;
+					}
+				}                    //  increment the counter
+      if (i<document.getElementById("command_div").childNodes.length) {            //  if the counter < 10, call the loop function
+         Start();             //  ..  again which will trigger another
+      }
+			else if(i==document.getElementById("command_div").childNodes.length)
+			{
+				 i++;
+				 Start();
+			}
+			else
+			{
+				if(i==document.getElementById("command_div").childNodes.length+1){
+					if(Arrive()==0){
+						alert("Stage Fail!! Unreach Goal!!");
+					}
+					else if(target_money!=total_money){
+						alert("Stage Fail!! Unreach enough amount of money!!");
+					}
+					else{
+						alert("Stage clear");
+					}
+				}
+
+				i=0;
+				delay_time = 1000;
+			}                        //  ..  setTimeout()
+		}, delay_time)
+
+			}
+
+			//=========Map reference function==============
+			//initial map (create img)
+			function Map_init(){
+				var MA = document.getElementById("MapArea");
+				MA.style.height = Xmax * Bsize;
+				MA.style.width = Ymax * Bsize;
+				MA.style.left = Xpos;
+				MA.style.top = Ypos;
+
+				MA.innerHTML = "";
+				var i,j;
+				for(i=0; i<Xmax; i++){
+					for(j=0; j<Ymax; j++){
+						MA.innerHTML += "<img name='mblock0' class='mblock0_s'>";
+					}
+					//MA.innerHTML += "<br>";
+				}
+
+				for(i=0; i<Xmax; i++){
+					for(j=0; j<Ymax; j++){
+						MA.innerHTML += "<img name='mblock1' class='mblock1_s'>";
+					}
+					//MA.innerHTML += "<br>";
+				}
+
+				var MB0 = document.getElementsByName("mblock0");
+				var MB1 = document.getElementsByName("mblock1");
+
+
+				for(i=0; i<Xmax; i++){
+					for(j=0; j<Ymax; j++){
+							MB0[Xmax*j + i].style.left = Bsize * i;
+							MB0[Xmax*j + i].style.top = Bsize * j;
+							MB1[Xmax*j + i].style.left = Bsize * i;
+							MB1[Xmax*j + i].style.top = Bsize * j;
+					}
+				}
+
+			}
+
+			//Draw the map
+			function Map_draw(){
+				var MB = document.getElementsByName("mblock0");
+				if(MB == null)alert('fuck');
+				var i,j;
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MB[j*Xmax + i].src = MapSrc + "/" + Map0[j*Xmax + i] + ".png";
+					}
+				}
+
+				var MB = document.getElementsByName("mblock1");
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MB[j*Xmax + i].src = MapSrc + "/" + Map1[j*Xmax + i] + ".png";
+					}
+				}
+			}
+
+			//Clear the map
+			function Map_clear(){
+				var MB;
+				var i,j;
+				for(j=0; j<Ymax; j++){
+					for(i=0; i<Xmax; i++){
+						MB = document.getElementsByName("mblock0");
+						MB[j*Xmax + i].src = "";
+					}
+				}
+			}
+
+			//window.onload = Web_init;
+
+			function Map_load(){
+				var mname = document.getElementById("map_name").value;
+				var res = new String;
+
+				para= "key1=" + mname;
+				var oXHR=new XMLHttpRequest();
+				oXHR.open("GET","map_load.php?"+para,true);
+				oXHR.onreadystatechange= function(){
+					if(oXHR.readyState==4 &&(oXHR.status==200||oXHR.status==304)){
+						target_money = 0;
+						res = oXHR.responseText;
+						//=====================================
+
+						if(res != "f"){
+							var res2 = res.split("&");
+							Name = res2[0];
+							MapSrc = res2[1];
+							Xmax = res2[2];
+							Ymax = res2[3];
+							Bsize = res2[4];
+							Map0 = (res2[5]).split(",");
+							Map1 = (res2[6]).split(",");
+							Mwalk = (res2[7]).split(",");
+
+							Map_init();
+							Map_draw();
+							alert("Load success !!");
+							face=0;
+							Char_init(0,0);
+							var count_x,count_y;
+							for (count_x=0;count_x<Xmax;count_x++){
+								for(count_y=0;count_y<Ymax;count_y++){
+									if(Map1[count_y+count_x*Xmax] == 195)target_money+=5;
+									if(Map1[count_y+count_x*Xmax] == 193)target_money+=10;
+								}
+							}
+						}
+						else{
+							alert("Load fail !!");
+						}
+						//=====================================
+					}
+				}
+				oXHR.send();
+			}
+
+			//charactor relative====================================================
+			var CharSrc = "actor";
+			var face = 0;	//0:down 1:left 2:up 3:right
+			var Xchar = 0;
+			var Ychar = 0;
+
+			function Get_map_type(x,y,l){
+				if(l == 0)return Map0[y*Xmax + x];
+				else return Map1[y*Xmax + x];
+			}
+
+			function Get_map_walk(x,y){
+				var w0 = Mwalk[Map0[y*Xmax + x]];
+				var w1 = Mwalk[Map1[y*Xmax + x]];
+				if(w0==0 && w1==0)return 0;
+				else return 1;
+			}
+
+			function Char_init(cx,cy){
+				var rm = document.getElementById("char");
+				if(rm != null)rm.parentNode.removeChild(rm);
+				if(Get_map_walk(cx,cy) == 0){
+					var MA = document.getElementById("MapArea");
+					MA.innerHTML += "<img id='char' class='char_s'>";
+					var ch = document.getElementById("char");
+					ch.src = CharSrc + "/D_1.png";
+					ch.style.left = cx*Bsize;
+					ch.style.top = cy*Bsize;
+					Xchar = cx;
+					Ychar = cy;
+				}
+				else {
+					alert("fail");
+				}
+			}
+
+			function Face_init(){
+				var fn;
+				if(face == 0)fn = 'D';
+				else if(face == 1)fn = 'L';
+				else if(face == 2)fn = 'U';
+				else if(face == 3)fn = 'R';
+				var ch = document.getElementById('char');
+				ch.src = CharSrc + "/" + fn + "_1.png";
+			}
+
+			var ani_timer = null;
+			function Set_ani(sel){
+				if(sel == 1){
+					if(ani_timer == null)
+						ani_timer = setInterval(walk_ani, 100);
+				}
+				else{
+					clearInterval(ani_timer);
+					wnum = 2;
+					ani_timer = null;
+				}
+			}
+
+			var wnum = 2;
+			function walk_ani(){
+				var fn;
+				if(face == 0)fn = 'D';
+				else if(face == 1)fn = 'L';
+				else if(face == 2)fn = 'U';
+				else if(face == 3)fn = 'R';
+				var ch = document.getElementById('char');
+				ch.src = CharSrc + "/" + fn + "_" + wnum + ".png";
+				wnum++;
+				wnum = wnum%3;
+			}
+			////
+			var mcount = 0;
+			var mov_timer = null;
+
+			function Char_walk(){
+				if(mov_timer != null)return;
+				if(face == 0){
+					if(Get_map_walk(Xchar,Ychar+1)==1 || Ychar==Ymax-1)return;
+					else Ychar++;
+				}
+				else if(face == 1){
+					if(Get_map_walk(Xchar-1,Ychar)==1 || Xchar==0)return;
+					else Xchar--;
+				}
+				else if(face == 2){
+					if(Get_map_walk(Xchar,Ychar-1)==1 || Ychar==0)return;
+					else Ychar--;
+				}
+				else if(face == 3){
+					if(Get_map_walk(Xchar+1,Ychar)==1 || Xchar==Xmax-1)return;
+					else Xchar++;
+				}
+
+				if(mov_timer == null){
+					Set_ani(1);
+					mov_timer = setInterval(Char_move, 10);
+				}
+			}
+
+			function Char_move(){
+				var ch = document.getElementById('char');
+				if(face == 0)ch.style.top = parseInt(ch.style.top) + 1;
+				else if(face == 1)ch.style.left = parseInt(ch.style.left) - 1;
+				else if(face == 2)ch.style.top = parseInt(ch.style.top) - 1;
+				else if(face == 3)ch.style.left = parseInt(ch.style.left) + 1;
+				mcount++;
+				if(mcount == Bsize){
+					clearInterval(mov_timer);
+					mov_timer = null;
+					Set_ani(0);
+					mcount = 0;
+					IsWalk = 0;
+					Face_init();
+				}
+			}
+
+			function Char_turn(sel){
+				if(sel == 1)face = (face + 4 - 1) % 4;
+				else face = (face + 1) % 4;
+				Face_init();
+			}
+
+			document.onkeydown = function(){
+				if(document.getElementById("kb").checked == false)return;
+				if(mov_timer != null)return;
+				var keycode = event.which || event.keyCode;
+				switch(keycode){
+					case 37:
+						if(face!=1){
+							face = 1;
+							Face_init();
+						}
+						Char_walk();
+						break;
+
+					case 38:
+							if(face!=2){
+							face = 2;
+							Face_init();
+						}
+						Char_walk();
+						break;
+
+					case 39:
+						if(face!=3){
+							face = 3;
+							Face_init();
+						}
+						Char_walk();
+						break;
+
+					case 40:
+						if(face!=0){
+							face = 0;
+							Face_init();
+						}
+						Char_walk();
+						break;
+				}
+			}
+
+			//Hit animate
+			HitSrc = "hit";
+			var hit_timer = null;
+			var hit_count = 0;
+
+			function Hit_set(){
+				if(hit_timer != null)return;
+				var MA = document.getElementById("MapArea");
+				if(!document.getElementById('hit_img'))MA.innerHTML += "<img id='hit_img' class='hit_s'>";
+
+				var ch = document.getElementById("char");
+				var hani = document.getElementById("hit_img");
+				hit_count = 0;
+				hani.style.top = Ychar*Bsize;
+				hani.style.left = Xchar*Bsize;
+				if(face == 0)hani.style.top = (Ychar + 1)*Bsize;
+				else if(face == 1)hani.style.left = (Xchar - 1)*Bsize;
+				else if(face == 2)hani.style.top = (Ychar - 1)*Bsize;
+				else if(face == 3)hani.style.left = (Xchar + 1)*Bsize;
+
+				hit_timer = setInterval(Hit_ani, 100);
+			}
+
+			function Hit_ani(){
+				var hani = document.getElementById('hit_img');
+				if(hit_count > 11){
+					clearInterval(hit_timer);
+					hit_timer = null;
+					//hani.parentNode.removeChild(hani);
+					hit_count = 0;
+					hani.src = HitSrc + "/" + hit_count + ".png";
+				}
+				hani.src = HitSrc + "/" + hit_count + ".png";
+				hit_count++;
+			}
+
+			function Hit_monster(){
+				Hit_set();
+				var bx = Xchar;
+				var by = Ychar;
+
+				if(face == 0)by++;
+				else if(face == 1)bx--;
+				else if(face == 2)by--;
+				else if(face == 3)bx++;
+
+				var detect = by*Xmax + bx;
+				if(Map1[detect] == 195){
+					Map1[detect] = 0;
+					document.getElementsByName("mblock1")[detect].src = MapSrc + "/" + Map1[detect] + ".png";
+					//alert("Get 5$ !!");
+					total_money +=5;
+				}
+			}
+
+			//Treasure
+			function Open_box(){
+				var bx = Xchar;
+				var by = Ychar;
+
+				if(face == 0)by++;
+				else if(face == 1)bx--;
+				else if(face == 2)by--;
+				else if(face == 3)bx++;
+
+				var detect = by*Xmax + bx;
+				if(Map1[detect] == 193){
+					//alert("Get 10$ !!");
+					total_money += 10;
+					Map1[detect]++;
+					document.getElementsByName("mblock1")[detect].src = MapSrc + "/" + Map1[detect] + ".png";
+				}
+			}
+
+			//switch
+			function Switch(){
+				var bx = Xchar;
+				var by = Ychar;
+
+				if(face == 0)by++;
+				else if(face == 1)bx--;
+				else if(face == 2)by--;
+				else if(face == 3)bx++;
+
+				var detect = by*Xmax + bx;
+				if(Map1[detect] == 198){
+					Map1[detect]++;
+					document.getElementsByName("mblock1")[detect].src = MapSrc + "/" + Map1[detect] + ".png";
+					Find_switch();
+				}
+			}
+
+			function Find_switch(){
+				var i;
+				var dis = 0;
+				for(i=0; i<Xmax*Ymax; i++){
+					if(Map1[i] == 196){
+						dis = 1;
+						Map1[i]++;
+						document.getElementsByName("mblock1")[i].src = MapSrc + "/" + Map1[i] + ".png";
+					}
+				}
+				if(dis == 1){
+					//alert("The trap is dissapear !!");
+					dis = 0;
+				}
+			}
+
+			function Arrive(){
+				if(Map1[Xchar + Ychar*Xmax] == 200){
+						return 1;
+				}
+				else return 0;
+			}
+
+		</script>
+
+		<style>
+			.map_area_s{
+				position: absolute;
+				border: 10px ridge;
+			}
+
+			img.mblock0_s {
+				position: absolute;
+				height: 48px;
+				width: 48px;
+				border: 0px;
+			}
+
+			img.mblock1_s {
+				position: absolute;
+				height: 48px;
+				width: 48px;
+				border: 0px;
+			}
+
+			img.char_s {
+				position: absolute;
+				height: 48px;
+				width: 48px;
+				border: 0px;
+			}
+
+			img.hit_s {
+				position: absolute;
+				height: 48px;
+				width: 48px;
+				border: 0px;
+			}
+
+		</style>
+	</head>
+
+	<body>
+		<div id="another1_div">
+			<input type="text" id="map_name" value="test">
+			<input type="button" value="load" onclick="Map_load()"><br>
+			<input type="button" value="init" onclick="Map_init()">
+			<input type="button" value="draw" onclick="Map_draw()">
+			<input type="button" value="clear" onclick="Map_clear()">
+			<br><br>
+			<input type="button" value="charactor" onclick="Char_init(0,1)">
+			<input type="button" value="walk" onclick="Char_walk()">
+			<input type="button" value="turn left" onclick="Char_turn(1)">
+			<input type="button" value="turn right" onclick="Char_turn(2)">
+			<input type="button" value="Hit" onclick="Hit_monster()">
+			<input type="button" value="Open" onclick="Open_box()">
+			<input type="button" value="Button" onclick="Switch()">
+			<input type="button" value="finish" onclick="Arrive()">
+			<input type="checkbox" id="kb"> Keyboard<br><br><br><br>
+
+			<div id="MapArea" align="center" class="map_area_s">
+			</div>
+		</div>
+		<div id="another2_div">
+
+
+		<div id="go_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+		  <img src="go.jpg" draggable="true" ondragstart="drag(event)" id="drag1" name="go" width="55" height="19">
+		</div>
+		<div id="left_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+		  <img src="left.jpg" draggable="true" ondragstart="drag(event)" id="drag2" name="left" width="55" height="19">
+		</div>
+		<div id="right_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+		  <img src="right.jpg" draggable="true" ondragstart="drag(event)" id="drag3" name="right" width="55" height="19">
+		</div>
+		<div id="open_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+		  <img src="open.jpg" draggable="true" ondragstart="drag(event)" id="drag4" name="open" width="55" height="19">
+		</div>
+		<div id="attack_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+		  <img src="attack.jpg" draggable="true" ondragstart="drag(event)" id="drag5" name="attack" width="55" height="19">
+		</div>
+		<div id="operation_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+		  <img src="operation.jpg" draggable="true" ondragstart="drag(event)" id="drag6" name="operation" width="55" height="19">
+		</div>
+		<div id="for_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+		  <img src="for_howmany.jpg" draggable="true" ondragstart="drag(event)" id="drag7" name="for" width="55" height="19">
+		</div>
+		<div id="delete_div" ondrop="drop(event)" ondragover="allowDrop(event)">
+		  <img src="delete.jpg" id="delete_loc" width="55" height="19">
+		</div>
+		<br style="clear: both;">
+		<div id="command_div" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+		<br style="clear: both;">
+		<button onclick="Start()">start</button>
+		</div>
+
+
+
+	</body>
+
+</html>
